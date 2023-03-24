@@ -145,10 +145,62 @@ if __name__ == '__main__':
     for i in range(0, len(valoresdecolumna)):
         impute_when_missing.append({'feature': valoresdecolumna[i],'impute_with' : 'MEAN'})
         
+        
+
+    # Printea las filas en las que faltan valores
+    for feature in drop_rows_when_missing:
+        train = train[train[feature].notnull()]
+        test = test[test[feature].notnull()]
+       
+
+    # Anade los valores a registros vacios con la media, la moda, la mediana, null o un numero constante dependiendo de lo que nos soliciten.
+    for feature in impute_when_missing:
+        if feature['impute_with'] == 'MEAN':
+            v = train[feature['feature']].mean()
+        elif feature['impute_with'] == 'MEDIAN':
+            v = train[feature['feature']].median()
+        elif feature['impute_with'] == 'CREATE_CATEGORY':
+            v = 'NULL_CATEGORY'
+        elif feature['impute_with'] == 'MODE':
+            v = train[feature['feature']].value_counts().index[0]
+        elif feature['impute_with'] == 'CONSTANT':
+            v = feature['value']
+        train[feature['feature']] = train[feature['feature']].fillna(v)
+        test[feature['feature']] = test[feature['feature']].fillna(v)
+        #print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
+
+
+
+    #rescale_features = {'num_var45_ult1': 'AVGSTD', 
+    #		         'num_op_var39_ult1': 'AVGSTD', 
+    #                   'num_op_var40_comer_ult3': 'AVGSTD',
+    #                   'num_var45_ult3': 'AVGSTD', 
+    #                   'num_aport_var17_ult1': 'AVGSTD'}
     
-    
-    
-    # Valores del conjunto Train
+    rescale_features={}
+    for i in range (0, len(valoresdecolumna)):
+        rescale_features.update({valoresdecolumna[i] : 'AVGSTD'})
+
+ # Escala los valores para que esten entre 0 y 1 
+    for (feature_name, rescale_method) in rescale_features.items():
+        if rescale_method == 'MINMAX':
+            _min = train[feature_name].min()
+            _max = train[feature_name].max()
+            scale = _max - _min
+            shift = _min
+        else:
+            shift = train[feature_name].mean()
+            scale = train[feature_name].std()
+        if scale == 0.:
+            del train[feature_name]
+            del test[feature_name]
+            #print('Feature %s was dropped because it has no variance' % feature_name)
+        else:
+            #print('Rescaled %s' % feature_name)
+            train[feature_name] = (train[feature_name] - shift).astype(np.float64) / scale
+            test[feature_name] = (test[feature_name] - shift).astype(np.float64) / scale
+
+   # Valores del conjunto Train
     trainX = train.drop('__target__', axis=1)
     #trainX = train['__target__']
 
